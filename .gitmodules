@@ -1,0 +1,4 @@
+[submodule "thirdparty/antlr4"]
+	path = thirdparty/antlr4
+	url = https://github.com/antlr/antlr4.git
+	branch = 4.7
