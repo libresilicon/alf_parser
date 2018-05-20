@@ -1,0 +1,323 @@
+ALF_REVISION "IEEE 1603-2003"
+
+LIBRARY sampleLibrary {
+
+    // global units for physical measurements
+    TIME { UNIT = 1e-9; }
+    FREQUENCY { UNIT = 1e6; }
+    DISTANCE { UNIT = 1e-6; }
+    AREA { UNIT = 1e-12; }
+    VOLTAGE { UNIT = 1; }
+    CURRENT { UNIT = 1e-3; }
+    ENERGY { UNIT = 1e-12; }
+    POWER { UNIT = 1e-3; }
+    CAPACITANCE { UNIT = 1e-12; }
+    RESISTANCE { UNIT = 1e3; }
+    INDUCTANCE { UNIT = 1e-9; }
+
+    // global definitions for PVT
+    PROCESS {
+        TABLE { nom snsp snwp wnsp wnwp }
+        DEFAULT = nom;
+    }
+    DERATE_CASE {
+        TABLE { nom bccom wccom bcind wcind bcmil wcmil }
+        DEFAULT = nom;
+    }
+    VOLTAGE VDD {
+    HEADER {
+        DERATE_CASE {
+            TABLE { nom bccom wccom bcind wcind bcmil wcmil }
+        }
+    }
+    TABLE { 1.5 1.7 1.3 1.6 1.4 1.9 1.1 }
+    DEFAULT = 1.5;
+    }
+
+    TEMPERATURE { MIN = -40; MAX = 125; DEFAULT = 25; }
+
+    // global thresholds for timing measurements
+    DELAY {
+        FROM { THRESHOLD = 0.5; }
+        TO { THRESHOLD = 0.5; }
+    }
+    SLEWRATE {
+        FROM { THRESHOLD { RISE = 0.3; FALL = 0.7; } }
+        TO { THRESHOLD { RISE = 0.6; FALL = 0.4; } }
+    }
+
+    // templates for cell characterization
+    TEMPLATE DelayPowerArc {
+        DELAY {
+            FROM { PIN = <FromPin>; }
+            TO { PIN = <ToPin>; }
+            HEADER {
+                CAPACITANCE { PIN = <ToPin>; TABLE { 0 0.5 1 } }
+                SLEWRATE { PIN = <FromPin>; TABLE { 0.1 1 } }
+            } TABLE { <DelayTable> }
+        }
+        SLEWRATE {
+            PIN = <ToPin>;
+            HEADER {
+                CAPACITANCE { PIN = <ToPin>; TABLE { 0 0.5 1 } }
+                SLEWRATE { PIN = <FromPin>; TABLE { 0.1 1 } }
+            } TABLE { <SlewTable> }
+        }
+        RESISTANCE = <Rdriver> {
+            PIN = <ToPin>;
+        }
+        ENERGY {
+            HEADER {
+                CAPACITANCE { PIN = <ToPin>; TABLE { 0 0.5 1 } }
+                SLEWRATE { PIN = <FromPin>; TABLE { 0.1 1 } }
+            } TABLE { <PowerTable> }
+        }
+    }
+    TEMPLATE NoisePropagation {
+        NOISE {
+            PIN = <ToPin>;
+            HEADER {
+                NOISE H { PIN = <FromPin>; }
+                PULSEWIDTH W { PIN = <FromPin>; }
+                CAPACITANCE C { PIN = <ToPin>; }
+            } EQUATION { <NoiseHight> }
+            }
+        PULSEWIDTH {
+            PIN = <ToPin>;
+            HEADER {
+                NOISE H { PIN = <FromPin>; }
+                PULSEWIDTH W { PIN = <FromPin>; }
+                CAPACITANCE C { PIN = <ToPin>; }
+            } EQUATION { <NoiseWidth> }
+        }
+        DELAY {
+            FROM { PIN = <FromPin>; }
+            TO { PIN = <ToPin>; }
+            HEADER {
+                NOISE H { PIN = <FromPin>; }
+                PULSEWIDTH W { PIN = <FromPin>; }
+                CAPACITANCE C { PIN = <ToPin>; }
+            } EQUATION { <NoiseDelay> }
+        }
+    }
+    TEMPLATE SetupHold {
+        SETUP {
+            FROM { PIN = <DataPin>; EDGE_NUMBER = 0; }
+            TO { PIN = <ClockPin>; }
+            HEADER {
+                SLEWRATE s1 { PIN = <DataPin>; EDGE_NUMBER = 0; TABLE { 0.1 1 } }
+                SLEWRATE s2 { PIN = <ClockPin>; TABLE { 0.1 0.2 0.3 } }
+            } TABLE { <SetupTable> }
+        }
+        HOLD {
+            TO { PIN = <ClockPin>; }
+            FROM { PIN = <DataPin>; EDGE_NUMBER = 1; }
+            HEADER {
+                SLEWRATE s1 { PIN = <DataPin>; EDGE_NUMBER = 1; TABLE { 0.1 1 } }
+                SLEWRATE s2 { PIN = <ClockPin>; TABLE { 0.1 0.2 0.3 } }
+                } TABLE { <HoldTable> }
+        }
+        NOISE_MARGIN = <DataNoiseMargin> {
+            PIN = <DataPin>;
+            TIME {
+                FROM { PIN = <DataPin>; EDGE_NUMBER = 0; }
+                TO { PIN = <DataPin>; EDGE_NUMBER = 1; }
+            }
+        }
+    }
+
+    // example of combinatorial circuit
+    CELL sampleNand2 {
+        CELLTYPE = combinational;
+        PIN A { DIRECTION = input; CAPACITANCE = 0.01; }
+        PIN B { DIRECTION = input; CAPACITANCE = 0.01; }
+        PIN Y { DIRECTION = output; LIMIT { CAPACITANCE { MAX = 1.0; } } }
+        FUNCTION {
+            BEHAVIOR { Y = ! ( A & B ); }
+        }
+        GROUP AnyInput { A B }
+        VECTOR ( 01 AnyInput -> 10 Y ) {
+            DelayPowerArc {
+            FromPin = AnyInput;
+            ToPin = Y;
+            Rdriver = 1;
+            DelayTable { 0 0.5 1 0 0.5 1 }
+            SlewTable { 0 0.5 1 0 0.5 1 }
+            PowerTable { 1 1 1 1 1 1 }
+            }
+        }
+        VECTOR ( 10 AnyInput -> 01 Y ) {
+            DelayPowerArc {
+            FromPin = AnyInput;
+            ToPin = Y;
+            Rdriver = 1;
+            DelayTable { 0 0.5 1 0 0.5 1 }
+            SlewTable { 0 0.5 1 0 0.5 1 }
+            PowerTable { 1 1 1 1 1 1 }
+            }
+        }
+        VECTOR ( 1* AnyInput -> *1 AnyInput <&> 0* Y -> *0 Y ) {
+            NoisePropagation = dynamic {
+                FromPin = AnyInput;
+                ToPin = Y;
+                NoiseHeight = 0.5*H / (C*(W + 1));
+                NoiseWidth = 0.5*H*W / (C + 1);
+                NoiseDelay = 0.5*C ;
+            }
+        }
+        VECTOR ( 0* AnyInput -> *0 AnyInput <&> 1* Y -> *1 Y ) {
+            NoisePropagation = dynamic {
+                FromPin = AnyInput;
+                ToPin = Y;
+                NoiseHeight = 0.5*H / (C*(W + 1));
+                NoiseWidth = 0.5*H*W / (C + 1);
+                NoiseDelay = 0.5*C ;
+            }
+        }
+    } // end CELL sampleNand2
+
+    // example of sequential circuit
+    CELL sampleDFlipFlop {
+        CELLTYPE = flipflop;
+        PIN D {
+            DIRECTION = input;
+            SIGNALTYPE = data;
+            CAPACITANCE = 0.01;
+        }
+        PIN C {
+            DIRECTION = input;
+            SIGNALTYPE = clock;
+            POLARITY = rising_edge;
+            CAPACITANCE = 0.01;
+            NOISE_MARGIN { LOW = 0.1; HIGH = 0.2; }
+            LIMIT { SLEWRATE { MAX = 0.3; } }
+        }
+        PIN Q {
+            DIRECTION = output;
+            SIGNALTYPE = data;
+            LIMIT { CAPACITANCE { MAX = 1.0; } }
+        }
+        FUNCTION {
+            BEHAVIOR {
+                @ ( 01 C ) { Q = D; }
+            }
+        }
+        VECTOR ( 01 C -> ?! Q ) {
+            DelayPowerArc {
+                FromPin = C;
+                ToPin = Q;
+                Rdriver = 1;
+                DelayTable { 0 0.5 1 0 0.5 1 }
+                SlewTable { 0 0.5 1 0 0.5 1 }
+                PowerTable { 1 1 1 1 1 1 }
+            }
+        }
+        VECTOR ( ?! D -> 01 C -> ?! D ) {
+            SetupHold {
+                DataPin = D;
+                ClockPin = C;
+                DataNoiseMargin = 0.2;
+                SetupTable { 1 1 1 1 1 1 }
+                HoldTable { 0 0 0 0 0 0 }
+            }
+        }
+    } // end CELL sampleDFlipFlop
+
+    // template for parameterized megacell
+    TEMPLATE \1PortAsyncRAM {
+        CELL <RAMInstance> {
+            CELLTYPE = memory;
+            GROUP Addr { <AddrPins> }
+            GROUP Din { <DataInputs> }
+            GROUP Dout { <DataOutputs> }
+            PIN Addr { 
+                DIRECTION=input;
+                SIGNALTYPE=address;
+                VIEW=physical;
+            }
+            PIN Din {
+                DIRECTION=input;
+                SIGNALTYPE=data;
+                VIEW=physical;
+            }
+            PIN Dout {
+                DIRECTION=output;
+                SIGNALTYPE=data;
+                VIEW=physical;
+            }
+            PIN WE {
+                DIRECTION=input;
+                SIGNALTYPE=enable;
+                POLARITY = high;
+            }
+            PIN [<DataHigh>:<DataLow>] DataArray [<Rows>:1] {
+                DIRECTION=none; VIEW = none;
+            }
+            PINGROUP [<AddrHigh>:<AddrLow>] AddrBus {
+                MEMBERS { <AddrPins> }
+                VIEW = functional;
+            }
+            PINGROUP [<DataHigh>:<DataLow>] DinBus {
+                MEMBERS { <DataInputs> } VIEW = functional;
+            }
+            PINGROUP [<DataHigh>:<DataLow>] DoutBus {
+                MEMBERS { <DataOutputs> } VIEW = functional;
+            }
+            FUNCTION {
+                BEHAVIOR {
+                    DoutBus = DataArray[AddrBus];
+                    @ ( WE ) { DataArray[AddrBus] = DinBus; }
+                }
+            }
+            GROUP AddrIndex { <AddrLow> : <AddrHigh> }
+            GROUP DataIndex { <DataLow> : <DataHigh> }
+            VECTOR ( 01 AddrBus[AddrIndex] -> ?? DoutBus[DataIndex] ) {
+                DELAY {
+                    FROM { PIN = AddrBus[AddrIndex]; }
+                    TO { PIN = DoutBus[DataIndex]; }
+                    HEADER {
+                        CAPACITANCE { PIN = DoutBus[DataIndex]; }
+                    }
+                    EQUATION { <Doe0> + <Doe1> * CAPACITANCE }
+                }
+            }
+            VECTOR ( ?! DinBus[DataIndex] -> ?! DoutBus[DataIndex] ) {
+                EXISTENCE_CONDITION = WE;
+                DELAY {
+                    FROM { PIN = DinBus[DataIndex]; }
+                    TO { PIN = DoutBus[DataIndex]; }
+                    HEADER {
+                        CAPACITANCE { PIN = DoutBus[DataIndex]; }
+                    }
+                    EQUATION { <Dio0> + <Dio1> * CAPACITANCE }
+                }
+            }
+            VECTOR ( *? AddrBus[AddrIndex] -> 01 WE
+            -> 10 WE -> ?* AddrBus[AddrIndex] ) {
+                SETUP = <AddrSetup> {
+                    FROM { PIN = AddrBus[AddrIndex]; EDGE_NUMBER = 0; }
+                    TO { PIN = WE; EDGE_NUMBER = 0; }
+                }
+                HOLD = <AddrHold> {
+                    FROM { PIN = WE; EDGE_NUMBER = 1; }
+                    TO { PIN = AddrBus[AddrIndex]; EDGE_NUMBER = 1; }
+                }
+            }
+        }
+    } // end TEMPLATE \1PortAsyncRAM
+
+    // instance of parameterized megacell
+    \1PortAsyncRAM {
+        RAMInstance = \1PortAsyncRAM64X8 ;
+        AddrPins { Addr5 Addr4 Addr3 Addr2 Addr1 Addr0 }
+        DataInputs { Din7 Din6 Din5 Din4 Din3 Din2 Din1 Din0 }
+        DataOutputs { Dout7 Dout6 Dout5 Dout4 Dout3 Dout2 Dout1 Dout0 }
+        AddrHigh = 5; AddrLow = 0;
+        DataHigh = 7; DataLow = 0;
+        Rows = 64;
+        Doe0 = 1; Doe1 = 1;
+        Dio0 = 1; Dio1 = 1;
+        AddrSetup = 1;
+        AddrHold = 1;
+    }
+}
