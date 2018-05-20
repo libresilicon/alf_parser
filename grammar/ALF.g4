@@ -14,13 +14,13 @@ alf_type: identifier | '@' | ':';
 alf_name: identifier | control_expression;
 
 alf_value:
-	number
-	| multiplier_prefix_symbol
+	Number
+	| Multiplier_prefix_symbol
 	| identifier
-	| quoted_string
-	| bit_literal
-	| based_literal
-	| edge_value
+	| Quoted_string
+	| Bit_literal
+	| Based_literal
+	| Edge_value
 	| arithmetic_expression
 	| boolean_expression
 	| control_expression;
@@ -30,23 +30,23 @@ alf_statement_termination:
 	| '{' (alf_value | ':' | ';')* '}'
 	| '{' alf_statement* '}';
 
-character:
-	whitespace // See Syntax 2, 6.1
-	| letter
+fragment Character: // See Syntax 2, 6.1
+	Letter
 	| Digit
-	| Special;
+	| Special
+	| Whitespace;
 
-whitespace: ' ' | '\t' | '\n' | '\u000B' | '\r' | '\f';
+Whitespace: [ \t\n\u000B\r\f] -> channel (HIDDEN);
 
-letter: Uppercase | Lowercase;
+fragment Letter: Uppercase | Lowercase;
 
-Uppercase: [A-Z];
+fragment Uppercase: [A-Z];
 
-Lowercase: [a-z];
+fragment Lowercase: [a-z];
 
-Digit: [0-9];
+fragment Digit: [0-9];
 
-Special:
+fragment Special:
 	[&|^*/%?!:;,'@=.$_()<>{}]
 	| '\\'
 	| '+'
@@ -56,26 +56,18 @@ Special:
 	| '['
 	| ']';
 
-comment:
-	in_line_comment // See Syntax 3, 6.2
-	| block_comment;
+/*
+ comment:
+ In_line_comment // See Syntax 3, 6.2
+ | Block_comment;
+ */
+In_line_comment: '//' Character* [\n\r] -> channel (HIDDEN);
 
-in_line_comment: '//' character* '\n' | '//' character* '\r';
+Block_comment: '/*' Character* '*/' -> channel (HIDDEN);
 
-block_comment: '/*' character* '*/';
+Delimiter: [(){}[\]:;,]; // See Syntax 4, 6.3
 
-delimiter: // See Syntax 4, 6.3
-	'('
-	| ')'
-	| '{'
-	| '}'
-	| '['
-	| ']'
-	| ':'
-	| ';'
-	| ',';
-
-operator:
+operator_:
 	arithmetic_operator // See Syntax 5, 6.4	
 	| boolean_operator
 	| relational_operator
@@ -105,47 +97,47 @@ event_operator: '->' | '~>' | '<->' | '<~>' | '&>' | '<&>';
 
 meta_operator: '=' | '?' | '@';
 
-number:
-	signed_integer // See Syntax 6, 6.5
-	| signed_real
-	| unsigned_integer
-	| unsigned_real;
-signed_number: signed_integer | signed_real;
-unsigned_number: unsigned_integer | unsigned_real;
-integer: signed_integer | unsigned_integer;
-signed_integer: sign unsigned_integer;
-unsigned_integer: Digit ('_'? Digit)*;
+Number:
+	Signed_integer // See Syntax 6, 6.5
+	| Signed_real
+	| Unsigned_integer
+	| Unsigned_real;
+signed_number: Signed_integer | Signed_real;
+unsigned_number: Unsigned_integer | Unsigned_real;
+Integer: Signed_integer | Unsigned_integer;
+Signed_integer: Sign Unsigned_integer;
+Unsigned_integer: Digit ('_'? Digit)*;
 
-real: signed_real | unsigned_real;
-signed_real: sign unsigned_real;
-unsigned_real: mantissa exponent? | unsigned_integer exponent;
+real: Signed_real | Unsigned_real;
+Signed_real: Sign Unsigned_real;
+Unsigned_real: Mantissa Exponent? | Unsigned_integer Exponent;
 
-sign: '+' | '-';
-mantissa:
-	'.' unsigned_integer
-	| unsigned_integer '.' unsigned_integer?;
-exponent:
-	'E' sign? unsigned_integer
-	| 'e' sign? unsigned_integer;
-index_value:
-	unsigned_integer // See Syntax 7, 6.6
-	| atomic_identifier;
+fragment Sign: [+-];
+fragment Mantissa:
+	'.' Unsigned_integer
+	| Unsigned_integer '.' Unsigned_integer?;
+fragment Exponent:
+	'E' Sign? Unsigned_integer
+	| 'e' Sign? Unsigned_integer;
+Index_value:
+	Unsigned_integer // See Syntax 7, 6.6
+	| Atomic_identifier;
 index:
-	single_index // See Syntax 8, 6.6
-	| multi_index;
-single_index: '[' index_value ']';
-multi_index: '[' index_value ':' index_value ']';
-multiplier_prefix_symbol:
-	unity letter* // See Syntax 9, 6.7
-	| K letter*
-	| M E G letter*
-	| G letter*
-	| M letter*
-	| U letter*
-	| N letter*
-	| P letter*
-	| F letter*;
-unity: '1';
+	Single_index // See Syntax 8, 6.6
+	| Multi_index;
+Single_index: '[' Index_value ']';
+Multi_index: '[' Index_value ':' Index_value ']';
+Multiplier_prefix_symbol:
+	Unity Letter* // See Syntax 9, 6.7
+	| K Letter*
+	| M E G Letter*
+	| G Letter*
+	| M Letter*
+	| U Letter*
+	| N Letter*
+	| P Letter*
+	| F Letter*;
+Unity: '1';
 K: [Kk];
 M: [Mm];
 E: [Ee];
@@ -156,47 +148,35 @@ P: [Pp];
 F: [Ff];
 multiplier_prefix_value:
 	unsigned_number // See Syntax 10, 6.7
-	| multiplier_prefix_symbol;
-bit_literal:
-	alphanumeric_bit_literal // See Syntax 11, 6.8
-	| symbolic_bit_literal;
-alphanumeric_bit_literal:
-	numeric_bit_literal
-	| alphabetic_bit_literal;
-numeric_bit_literal: '0' | '1';
-alphabetic_bit_literal:
-	'X'
-	| 'Z'
-	| 'L'
-	| 'H'
-	| 'U'
-	| 'W'
-	| 'x'
-	| 'z'
-	| 'l'
-	| 'h'
-	| 'u'
-	| 'w';
+	| Multiplier_prefix_symbol;
+Bit_literal:
+	Alphanumeric_bit_literal // See Syntax 11, 6.8
+	| Symbolic_bit_literal;
+Alphanumeric_bit_literal:
+	Numeric_bit_literal
+	| Alphabetic_bit_literal;
+fragment Numeric_bit_literal: [01];
+fragment Alphabetic_bit_literal: [XZLHUWxzlhuw];
 
-symbolic_bit_literal: '?' | '*';
-based_literal:
-	binary_based_literal // See Syntax 12, 6.9
-	| octal_based_literal
-	| decimal_based_literal
-	| hexadecimal_based_literal;
-binary_based_literal:
-	binary_base bit_literal ('_'? bit_literal)*;
-binary_base: '\'B' | '\'b';
-octal_based_literal: octal_base octal_digit ('_'? octal_digit)*;
-octal_base: '\'O' | '\'o';
-octal_digit: bit_literal | '2' | '3' | '4' | '5' | '6' | '7';
-decimal_based_literal: decimal_base Digit ('_'? Digit)*;
-decimal_base: '\'D' | '\'d';
-hexadecimal_based_literal:
-	hexadecimal_base hexadecimal_digit ('_'? hexadecimal_digit)*;
-hexadecimal_base: '\'H' | '\'h';
-hexadecimal_digit:
-	octal_digit
+fragment Symbolic_bit_literal: [?*];
+Based_literal:
+	Binary_Based_literal // See Syntax 12, 6.9
+	| Octal_Based_literal
+	| Decimal_Based_literal
+	| Hexadecimal_Based_literal;
+Binary_Based_literal:
+	Binary_base Bit_literal ('_'? Bit_literal)*;
+fragment Binary_base: '\'B' | '\'b';
+Octal_Based_literal: Octal_base Octal_digit ('_'? Octal_digit)*;
+fragment Octal_base: '\'O' | '\'o';
+Octal_digit: Bit_literal | '2' | '3' | '4' | '5' | '6' | '7';
+Decimal_Based_literal: Decimal_base Digit ('_'? Digit)*;
+fragment Decimal_base: '\'D' | '\'d';
+Hexadecimal_Based_literal:
+	Hexadecimal_base Hexadecimal_digit ('_'? Hexadecimal_digit)*;
+fragment Hexadecimal_base: '\'H' | '\'h';
+Hexadecimal_digit:
+	Octal_digit
 	| '8'
 	| '9'
 	| 'A'
@@ -212,68 +192,68 @@ hexadecimal_digit:
 	| 'e'
 	| 'f';
 
-boolean_value:
-	alphanumeric_bit_literal // See Syntax 13, 6.10
-	| based_literal
-	| integer;
+Boolean_value:
+	Alphanumeric_bit_literal // See Syntax 13, 6.10
+	| Based_literal
+	| Integer;
 arithmetic_value:
-	number // See Syntax 14, 6.11
+	Number // See Syntax 14, 6.11
 	| identifier
-	| bit_literal
-	| based_literal;
-edge_literal:
-	bit_edge_literal // See Syntax 15, 6.12
-	| based_edge_literal
-	| symbolic_edge_literal;
-bit_edge_literal: bit_literal bit_literal;
-based_edge_literal: based_literal based_literal;
-symbolic_edge_literal: '?~' | '?!' | '?-';
-edge_value: '(' edge_literal ')';
+	| Bit_literal
+	| Based_literal;
+Edge_literal:
+	Bit_edge_literal // See Syntax 15, 6.12
+	| Based_edge_literal
+	| Symbolic_edge_literal;
+Bit_edge_literal: Bit_literal Bit_literal;
+Based_edge_literal: Based_literal Based_literal;
+Symbolic_edge_literal: '?~' | '?!' | '?-';
+Edge_value: '(' Edge_literal ')';
 identifier:
-	atomic_identifier // See Syntax 17, 6.13
+	Atomic_identifier // See Syntax 17, 6.13
 	| indexed_identifier
 	| hierarchical_identifier
-	| escaped_identifier;
-atomic_identifier:
-	non_escaped_identifier
-	| placeholder_identifier;
+	| Escaped_identifier;
+Atomic_identifier:
+	Non_escaped_identifier
+	| Placeholder_identifier;
 hierarchical_identifier:
 	full_hierarchical_identifier
 	| partial_hierarchical_identifier;
-non_escaped_identifier:
-	letter (letter | Digit | '_' | '$' | '#')*;
+Non_escaped_identifier:
+	Letter (Letter | Digit | '_' | '$' | '#')*;
 
-placeholder_identifier: // See Syntax 19, 6.13.2
-	'<' non_escaped_identifier '>';
+Placeholder_identifier: // See Syntax 19, 6.13.2
+	'<' Non_escaped_identifier '>';
 indexed_identifier: // See Syntax 20, 6.13.3
-	atomic_identifier index;
+	Atomic_identifier index;
 full_hierarchical_identifier: // See Syntax 21, 6.13.4
-	atomic_identifier index? '.' atomic_identifier index? (
-		'.' atomic_identifier index?
+	Atomic_identifier index? '.' Atomic_identifier index? (
+		'.' Atomic_identifier index?
 	)*;
 partial_hierarchical_identifier: // See Syntax 22, 6.13.5
-	atomic_identifier index? ('.' atomic_identifier index?)* '..' (
-		atomic_identifier index? ('.' atomic_identifier index?)* '..'
-	)* (atomic_identifier index? ( '.' atomic_identifier index?)*)?;
-escaped_identifier: // See Syntax 23, 6.13.6
-	'\\' escapable_character escapable_character?;
-escapable_character: letter | Digit | Special;
-keyword_identifier: // See Syntax 24, 6.13.7
-	letter ('_'? letter)*;
-quoted_string: // See Syntax 25, 6.14
-	'"' character* '"';
+	Atomic_identifier index? ('.' Atomic_identifier index?)* '..' (
+		Atomic_identifier index? ('.' Atomic_identifier index?)* '..'
+	)* (Atomic_identifier index? ( '.' Atomic_identifier index?)*)?;
+Escaped_identifier: // See Syntax 23, 6.13.6
+	'\\' Escapable_character+;
+fragment Escapable_character: Letter | Digit | Special;
+Keyword_identifier: // See Syntax 24, 6.13.7
+	Letter ('_'? Letter)*;
+Quoted_string: // See Syntax 25, 6.14
+	'"' Character* '"';
 string_value:
-	quoted_string // See Syntax 26, 6.15
+	Quoted_string // See Syntax 26, 6.15
 	| identifier;
 generic_value:
-	number // See Syntax 27, 6.16
-	| multiplier_prefix_symbol
+	Number // See Syntax 27, 6.16
+	| Multiplier_prefix_symbol
 	| identifier
-	| quoted_string
-	| bit_literal
-	| based_literal
-	| edge_value;
-vector_expression_macro: '#.' non_escaped_identifier;
+	| Quoted_string
+	| Bit_literal
+	| Based_literal
+	| Edge_value;
+vector_expression_macro: '#.' Non_escaped_identifier;
 generic_object: // See Syntax 28, 6.17
 	alias_declaration // See Syntax 29, 7.1
 	| constant_declaration
@@ -319,12 +299,12 @@ alias_declaration:
 constant_identifier: identifier;
 constant_declaration:
 	'CONSTANT' constant_identifier '=' constant_value ';'; // See Syntax 36, 7.8
-constant_value: number | based_literal;
+constant_value: Number | Based_literal;
 syntax_item_identifier: identifier;
 context_annotation: annotation;
 keyword_declaration:
-	'KEYWORD' keyword_identifier '=' syntax_item_identifier ';' // See Syntax 37, 7.9
-	| 'KEYWORD' keyword_identifier '=' syntax_item_identifier '{' context_annotation* '}';
+	'KEYWORD' Keyword_identifier '=' syntax_item_identifier ';' // See Syntax 37, 7.9
+	| 'KEYWORD' Keyword_identifier '=' syntax_item_identifier '{' context_annotation* '}';
 semantics_identifier: identifier;
 semantics_declaration:
 	'SEMANTICS' semantics_identifier '=' syntax_item_identifier ';' // See Syntax 38, 7.10
@@ -353,8 +333,8 @@ class_item:
 	| geometric_model
 	| geometric_transformation;
 group_identifier: identifier;
-left_index_value: index_value;
-right_index_value: index_value;
+left_index_value: Index_value;
+right_index_value: Index_value;
 group_declaration:
 	'GROUP' group_identifier '{' generic_value+ '}' // See Syntax 40, 7.14
 	| 'GROUP' group_identifier '{' left_index_value ':' right_index_value '}';
@@ -369,20 +349,18 @@ static_template_instantiation:
 	| template_identifier ('=' 'static')? '{' generic_value* '}'
 	| template_identifier ('=' 'static')? '{' annotation* '}';
 dynamic_template_instantiation:
-	template_identifier '=' 'dynamic' '{' (
-		dynamic_template_instantiation_item
-	)? '}';
+	template_identifier '=' 'dynamic' '{' dynamic_template_instantiation_item* '}';
 dynamic_template_instantiation_item:
 	annotation
 	| arithmetic_model
 	| arithmetic_assignment;
 arithmetic_assignment: identifier '=' arithmetic_expression ';';
 include_statement:
-	'INCLUDE' quoted_string ';'; // See Syntax 43, 7.17
+	'INCLUDE' Quoted_string ';'; // See Syntax 43, 7.17
 format_single_value_annotation: single_value_annotation;
 associate_statement:
-	'ASSOCIATE' quoted_string ';' // See Syntax 44, 7.18
-	| 'ASSOCIATE' quoted_string '{' format_single_value_annotation '}';
+	'ASSOCIATE' Quoted_string ';' // See Syntax 44, 7.18
+	| 'ASSOCIATE' Quoted_string '{' format_single_value_annotation '}';
 revision: 'ALF_REVISION' string_value;
 library_specific_object: // See Syntax 45, 7.19
 	library // See Syntax 46, 8.1
@@ -404,19 +382,15 @@ library_specific_object: // See Syntax 45, 7.19
 	| port
 	| pattern
 	| region;
-library_identifier: identifier;
-library_template_instantiation: template_instantiation;
 library:
-	'LIBRARY' library_identifier ';' // See Syntax 47, 8.2
-	| 'LIBRARY' library_identifier '{' library_item* '}'
-	| library_template_instantiation;
+	'LIBRARY' identifier ';' // See Syntax 47, 8.2
+	| 'LIBRARY' identifier '{' library_item* '}'
+	| template_instantiation;
 library_item: sublibrary | sublibrary_item;
-sublibrary_identifier: identifier;
-sublibrary_template_instantiation: template_instantiation;
 sublibrary:
-	'SUBLIBRARY' sublibrary_identifier ';'
-	| 'SUBLIBRARY' sublibrary_identifier '{' sublibrary_item* '}'
-	| sublibrary_template_instantiation;
+	'SUBLIBRARY' identifier ';'
+	| 'SUBLIBRARY' identifier '{' sublibrary_item* '}'
+	| template_instantiation;
 sublibrary_item:
 	all_purpose_item
 	| cell
@@ -429,12 +403,10 @@ sublibrary_item:
 	| array
 	| site
 	| region;
-cell_identifier: identifier;
-cell_template_instantiation: template_instantiation;
 cell: // See Syntax 48, 8.4
-	'CELL' cell_identifier ';'
-	| 'CELL' cell_identifier '{' cell_item* '}'
-	| cell_template_instantiation;
+	'CELL' identifier ';'
+	| 'CELL' identifier '{' cell_item* '}'
+	| template_instantiation;
 cell_item:
 	all_purpose_item
 	| pin
@@ -453,206 +425,165 @@ pin: // See Syntax 49, 8.6
 	scalar_pin
 	| vector_pin
 	| matrix_pin;
-pin_identifier: identifier;
-scalar_pin_template_instantiation: template_instantiation;
 scalar_pin:
-	'PIN' pin_identifier ';'
-	| 'PIN' pin_identifier '{' scalar_pin_item* '}'
-	| scalar_pin_template_instantiation;
+	'PIN' identifier ';'
+	| 'PIN' identifier '{' scalar_pin_item* '}'
+	| template_instantiation;
 scalar_pin_item: all_purpose_item | pattern | port;
-vector_pin_template_instantiation: template_instantiation;
 vector_pin:
-	'PIN' multi_index pin_identifier ';'
-	| 'PIN' multi_index pin_identifier '{' vector_pin_item* '}'
-	| vector_pin_template_instantiation;
+	'PIN' Multi_index identifier ';'
+	| 'PIN' Multi_index identifier '{' vector_pin_item* '}'
+	| template_instantiation;
 vector_pin_item: all_purpose_item | range;
-first_multi_index: multi_index;
-second_multi_index: multi_index;
-matrix_pin_template_instantiation: template_instantiation;
+first_multi_index: Multi_index;
+second_multi_index: Multi_index;
 matrix_pin:
-	'PIN' first_multi_index pin_identifier second_multi_index ';'
-	| 'PIN' first_multi_index pin_identifier second_multi_index '{' matrix_pin_item* '}'
-	| matrix_pin_template_instantiation;
+	'PIN' first_multi_index identifier second_multi_index ';'
+	| 'PIN' first_multi_index identifier second_multi_index '{' matrix_pin_item* '}'
+	| template_instantiation;
 matrix_pin_item: vector_pin_item;
 pingroup:
 	simple_pingroup // See Syntax 50, 8.7
 	| vector_pingroup;
-pingroup_identifier: identifier;
-simple_pingroup_template_instantiation: template_instantiation;
-members_multi_value_annotation: multi_value_annotation;
 simple_pingroup:
-	'PINGROUP' pingroup_identifier '{' members_multi_value_annotation all_purpose_item* '}'
-	| simple_pingroup_template_instantiation;
-vector_pingroup_template_instantiation: template_instantiation;
+	'PINGROUP' identifier '{' multi_value_annotation all_purpose_item* '}'
+	| template_instantiation;
 vector_pingroup:
-	'PINGROUP' multi_index pingroup_identifier '{' members_multi_value_annotation
-		vector_pingroup_item* '}'
-	| vector_pingroup_template_instantiation;
+	'PINGROUP' Multi_index identifier '{' multi_value_annotation vector_pingroup_item* '}'
+	| template_instantiation;
 vector_pingroup_item: all_purpose_item | range;
-primitive_identifier: identifier;
-primitive_template_instantiation: template_instantiation;
 primitive:
-	'PRIMITIVE' primitive_identifier '{' primitive_item* '}' // See Syntax 51, 8.9
-	| 'PRIMITIVE' primitive_identifier ';'
-	| primitive_template_instantiation;
+	'PRIMITIVE' identifier '{' primitive_item* '}' // See Syntax 51, 8.9
+	| 'PRIMITIVE' identifier ';'
+	| template_instantiation;
 primitive_item:
 	all_purpose_item
 	| pin
 	| pingroup
 	| function
 	| test;
-wire_identifier: identifier;
-wire_template_instantiation: template_instantiation;
 wire: // See Syntax 52, 8.10
-	'WIRE' wire_identifier '{' wire_item* '}'
-	| 'WIRE' wire_identifier ';'
-	| wire_template_instantiation;
+	'WIRE' identifier '{' wire_item* '}'
+	| 'WIRE' identifier ';'
+	| template_instantiation;
 wire_item: all_purpose_item | node;
-node_identifier: identifier;
-node_template_instantiation: template_instantiation;
 node: // See Syntax 53, 8.12
-	'NODE' node_identifier ';'
-	| 'NODE' node_identifier '{' node_item* '}'
-	| node_template_instantiation;
+	'NODE' identifier ';'
+	| 'NODE' identifier '{' node_item* '}'
+	| template_instantiation;
 node_item: all_purpose_item;
-vector_template_instantiation: template_instantiation;
 vector:
 	// See Syntax 54, 8.14
 	'VECTOR' control_expression ';'
 	| 'VECTOR' control_expression '{' vector_item* '}'
-	| vector_template_instantiation;
+	| template_instantiation;
 vector_item: all_purpose_item | wire_instantiation;
-layer_identifier: identifier;
-layer_template_instantiation: template_instantiation;
 layer:
-	'LAYER' layer_identifier ';' // See Syntax 55, 8.16
-	| 'LAYER' layer_identifier '{' layer_item* '}'
-	| layer_template_instantiation;
+	'LAYER' identifier ';' // See Syntax 55, 8.16
+	| 'LAYER' identifier '{' layer_item* '}'
+	| template_instantiation;
 layer_item: all_purpose_item;
-via_identifier: identifier;
-via_template_instantiation: template_instantiation;
 via:
-	'VIA' via_identifier ';' // See Syntax 56, 8.18
-	| 'VIA' via_identifier '{' via_item* '}'
-	| via_template_instantiation;
+	'VIA' identifier ';' // See Syntax 56, 8.18
+	| 'VIA' identifier '{' via_item* '}'
+	| template_instantiation;
 via_item: all_purpose_item | pattern | artwork;
-rule_identifier: identifier;
-rule_template_instantiation: template_instantiation;
 ruler:
-	'RULE' rule_identifier ';' // See Syntax 57, 8.20
-	| 'RULE' rule_identifier '{' rule_item* '}'
-	| rule_template_instantiation;
+	'RULE' identifier ';' // See Syntax 57, 8.20
+	| 'RULE' identifier '{' rule_item* '}'
+	| template_instantiation;
 rule_item:
 	all_purpose_item
 	| pattern
 	| region
 	| via_instantiation;
-antenna_identifier: identifier;
-antenna_template_instantiation: template_instantiation;
 antenna: // See Syntax 58, 8.21
-	'ANTENNA' antenna_identifier ';'
-	| 'ANTENNA' antenna_identifier '{' antenna_item* '}'
-	| antenna_template_instantiation;
+	'ANTENNA' identifier ';'
+	| 'ANTENNA' identifier '{' antenna_item* '}'
+	| template_instantiation;
 antenna_item: all_purpose_item | region;
 
-blockage_identifier: identifier;
-blockage_template_instantiation: template_instantiation;
 blockage:
-	'BLOCKAGE' blockage_identifier ';' // See Syntax 59, 8.22
-	| 'BLOCKAGE' blockage_identifier '{' blockage_item* '}'
-	| blockage_template_instantiation;
+	'BLOCKAGE' identifier ';' // See Syntax 59, 8.22
+	| 'BLOCKAGE' identifier '{' blockage_item* '}'
+	| template_instantiation;
 blockage_item:
 	all_purpose_item
 	| pattern
 	| region
 	| ruler
 	| via_instantiation;
-port_identifier: identifier;
-port_template_instantiation: template_instantiation;
 port:
-	'PORT' port_identifier ';' // See Syntax 60, 8.23
+	'PORT' identifier ';' // See Syntax 60, 8.23
 	'{' port_item* '}'
-	| 'PORT' port_identifier ';'
-	| port_template_instantiation;
+	| 'PORT' identifier ';'
+	| template_instantiation;
 port_item:
 	all_purpose_item
 	| pattern
 	| region
 	| ruler
 	| via_instantiation;
-site_identifier: identifier;
-site_template_instantiation: identifier;
+
 site:
-	'SITE' site_identifier ';' // See Syntax 61, 8.25
-	| 'SITE' site_identifier '{' site_item* '}'
-	| site_template_instantiation;
+	'SITE' identifier ';' // See Syntax 61, 8.25
+	| 'SITE' identifier '{' site_item* '}'
+	| template_instantiation;
 width_arithmetic_model: arithmetic_model;
 height_arithmetic_model: arithmetic_model;
 site_item:
 	all_purpose_item
 	| width_arithmetic_model
 	| height_arithmetic_model;
-array_identifier: identifier;
-array_template_instantiation: template_instantiation;
 array:
-	'ARRAY' array_identifier ';' // See Syntax 62, 8.27
-	| 'ARRAY' array_identifier '{' array_item* '}'
-	| array_template_instantiation;
+	'ARRAY' identifier ';' // See Syntax 62, 8.27
+	| 'ARRAY' identifier '{' array_item* '}'
+	| template_instantiation;
 array_item: all_purpose_item | geometric_transformation;
-pattern_identifier: identifier;
-pattern_template_instantiation: template_instantiation;
 pattern:
-	'PATTERN' pattern_identifier ';' // See Syntax 63, 8.29
-	| 'PATTERN' pattern_identifier '{' pattern_item* '}'
-	| pattern_template_instantiation;
+	'PATTERN' identifier ';' // See Syntax 63, 8.29
+	| 'PATTERN' identifier '{' pattern_item* '}'
+	| template_instantiation;
 pattern_item:
 	all_purpose_item
 	| geometric_model
 	| geometric_transformation;
-region_name_identifier: identifier;
-region_template_instantiation: template_instantiation;
 region:
-	'REGION' region_name_identifier ';' // See Syntax 64, 8.31
-	| 'REGION' region_name_identifier '{' region_item* '}'
-	| region_template_instantiation;
+	'REGION' name_identifier ';' // See Syntax 64, 8.31
+	| 'REGION' name_identifier '{' region_item* '}'
+	| template_instantiation;
 boolean_single_value_annotation: single_value_annotation;
 region_item:
 	all_purpose_item
 	| geometric_model
 	| geometric_transformation
 	| boolean_single_value_annotation;
-function_template_instantiation: template_instantiation;
 function:
-	'FUNCTION' '{' function_item+ // See Syntax 65, 9.1
-	'}'
-	| function_template_instantiation;
+	'FUNCTION' '{' function_item+ '}' // See Syntax 65, 9.1
+	| template_instantiation;
 function_item:
 	all_purpose_item
 	| behavior
 	| structure
 	| statetable;
-test_template_instantiation: template_instantiation;
 test:
 	'TEST' '{' test_item+ '}' // See Syntax 66, 9.2
-	| test_template_instantiation;
+	| template_instantiation;
 test_item: all_purpose_item | behavior | statetable;
-pin_variable_identifier: identifier;
-pin_variable: pin_variable_identifier;
+pin_variable: identifier;
 pin_value: // See Syntax 67, 9.3.1
 	pin_variable
-	| boolean_value;
+	| Boolean_value;
 pin_assignment:
 	pin_variable '=' pin_value ';'; // See Syntax 68, 9.3.2
-behavior_template_instantiation: template_instantiation;
 behavior:
 	'BEHAVIOR' '{' behavior_item+ '}' // See Syntax 69, 9.4
-	| behavior_template_instantiation;
-behavior_item_template_instantiation: template_instantiation;
+	| template_instantiation;
 behavior_item:
 	boolean_assignment
 	| control_statement
 	| primitive_instantiation
-	| behavior_item_template_instantiation;
+	| template_instantiation;
 boolean_assignment: pin_variable '=' boolean_expression ';';
 control_statement:
 	primary_control_statement alternative_control_statement*;
@@ -661,52 +592,40 @@ primary_control_statement:
 alternative_control_statement:
 	':' control_expression '{' boolean_assignment+ '}';
 primitive_instantiation:
-	primitive_identifier identifier? '{' pin_value+ '}'
-	| primitive_identifier identifier? '{' boolean_assignment+ '}';
-structure_template_instantiation: template_instantiation;
+	identifier identifier? '{' pin_value+ '}'
+	| identifier identifier? '{' boolean_assignment+ '}';
 structure: // See Syntax 70, 9.5
 	'STRUCTURE' '{' cell_instantiation+ '}'
-	| structure_template_instantiation;
+	| template_instantiation;
 cell_reference_identifier: identifier;
-cell_instance_identifier: identifier;
-cell_instantiation_template_instantiation:
-	template_instantiation;
 cell_instantiation:
-	cell_reference_identifier cell_instance_identifier ';'
-	| cell_reference_identifier cell_instance_identifier '{' cell_instance_pin_value* '}'
-	| cell_reference_identifier cell_instance_identifier '{' cell_instance_pin_assignment* '}'
-	| cell_instantiation_template_instantiation;
-cell_reference_pin_variable: pin_variable;
-cell_instance_pin_value: pin_value;
-cell_instance_pin_assignment:
-	cell_reference_pin_variable '=' cell_instance_pin_value ';';
-statetable_template_instantiation: template_instantiation;
+	cell_reference_identifier identifier ';'
+	| cell_reference_identifier identifier '{' pin_value* '}'
+	| cell_reference_identifier identifier '{' pin_assignment* '}'
+	| template_instantiation;
+cell_instance_pin_assignment: pin_variable '=' pin_value ';';
 statetable:
-	'STATETABLE' identifier? '{' statetable_header statetable_row+ '}'
-	// See Syntax 71, 9.6
-	| statetable_template_instantiation;
+	'STATETABLE' identifier? '{' statetable_header statetable_row+ '}' // See Syntax 71, 9.6
+	| template_instantiation;
 output_pin_variable: pin_variable;
 statetable_header:
 	input_pin_variable+ ':' output_pin_variable+ ';';
 statetable_row:
-	statetable_control_values ':' statetable_data_values ';';
-statetable_control_values: statetable_control_value+;
-statetable_control_value:
-	boolean_value
-	| symbolic_bit_literal
-	| edge_value;
-statetable_data_values: statetable_data_value+;
+	Statetable_control_value+ ':' statetable_data_value+ ';';
+Statetable_control_value:
+	Boolean_value
+	| Symbolic_bit_literal
+	| Edge_value;
 input_pin_variable: pin_variable;
 statetable_data_value:
-	boolean_value
+	Boolean_value
 	| '(' ('!')? input_pin_variable ')'
 	| '(' ('~')? input_pin_variable ')';
-non_scan_cell_template_instantiation: template_instantiation;
 non_scan_cell:
 	'NON_SCAN_CELL' '=' // See Syntax 72, 9.7
 	non_scan_cell_reference
 	| 'NON_SCAN_CELL' '{' non_scan_cell_reference+ '}'
-	| non_scan_cell_template_instantiation;
+	| template_instantiation;
 non_scan_cell_identifier: identifier;
 scan_cell_pin_identifier: identifier;
 non_scan_cell_pin_identifier: identifier;
@@ -716,10 +635,10 @@ non_scan_cell_reference:
 		non_scan_cell_pin_identifier '=' scan_cell_pin_identifier ';'
 	)* '}';
 range:
-	'RANGE' '{' index_value ':' index_value '}'; // See Syntax 73, 9.8
+	'RANGE' '{' Index_value ':' Index_value '}'; // See Syntax 73, 9.8
 boolean_expression:
 	'(' boolean_expression ')' // See Syntax 74, 9.9
-	| boolean_value
+	| Boolean_value
 	| identifier
 	| boolean_unary_operator boolean_expression
 	| boolean_expression boolean_binary_operator boolean_expression
@@ -754,7 +673,7 @@ vector_expression:
 	| boolean_expression control_and vector_expression
 	| vector_expression control_and boolean_expression
 	| vector_expression_macro;
-single_event: edge_literal boolean_expression;
+single_event: Edge_literal boolean_expression;
 vector_operator: event_operator | event_and | event_or;
 event_and: '&' | '&&';
 event_or: '|' | '||';
@@ -779,7 +698,7 @@ wire_instance_pin_assignment:
 geometric_model_template_instantiation: template_instantiation;
 geometric_model_identifier: identifier;
 geometric_model:
-	non_escaped_identifier geometric_model_identifier? '{' geometric_model_item geometric_model_item
+	Non_escaped_identifier geometric_model_identifier? '{' geometric_model_item geometric_model_item
 		* '}' // See Syntax 77, 9.16
 	| geometric_model_template_instantiation;
 point_to_point_single_value_annotation: single_value_annotation;
@@ -787,8 +706,8 @@ geometric_model_item:
 	point_to_point_single_value_annotation
 	| coordinates;
 coordinates: 'COORDINATES' '{' point+ '}';
-x_number: number;
-y_number: number;
+x_number: Number;
+y_number: Number;
 point: x_number y_number;
 geometric_transformation:
 	shift // See Syntax 78, 9.18
@@ -796,10 +715,10 @@ geometric_transformation:
 	| flip
 	| repeat;
 shift: 'SHIFT' '{' x_number y_number '}';
-rotate: 'ROTATE' '=' number ';';
-flip: 'FLIP' '=' number ';';
+rotate: 'ROTATE' '=' Number ';';
+flip: 'FLIP' '=' Number ';';
 repeat:
-	'REPEAT' ('=' unsigned_integer)* '{' geometric_transformation+ '}';
+	'REPEAT' ('=' Unsigned_integer)* '{' geometric_transformation+ '}';
 artwork_template_instantiation: template_instantiation;
 artwork:
 	'ARTWORK' '=' artwork_identifier ';' // See Syntax 79, 9.19
@@ -807,8 +726,8 @@ artwork:
 	| 'ARTWORK' '{' artwork_reference+ '}'
 	| artwork_template_instantiation;
 artwork_identifier: identifier;
-cell_pin_identifier: pin_identifier;
-artwork_pin_identifier: pin_identifier;
+cell_pin_identifier: identifier;
+artwork_pin_identifier: identifier;
 artwork_reference:
 	artwork_identifier '{' geometric_transformation* cell_pin_identifier* '}'
 	| artwork_identifier '{' geometric_transformation* (
@@ -816,19 +735,20 @@ artwork_reference:
 	)* '}';
 instance_identifier: identifier;
 via_instantiation:
-	via_identifier instance_identifier ';' // See Syntax 80, 9.20
-	| via_identifier instance_identifier '{' geometric_transformation* '}';
+	identifier instance_identifier ';' // See Syntax 80, 9.20
+	| identifier instance_identifier '{' geometric_transformation* '}';
 arithmetic_expression:
 	'(' // See Syntax 81, 10.1
-	arithmetic_expression ')'
-	| arithmetic_value
-	| identifier
-	| boolean_expression '?' arithmetic_expression ':' arithmetic_expression
-	| sign arithmetic_expression
-	| arithmetic_expression arithmetic_operator arithmetic_expression
+	arithmetic_expression ')'													# bracket
+	| arithmetic_value															# arithmetic
+	| identifier																# id
+	| boolean_expression '?' arithmetic_expression ':' arithmetic_expression	# condition
+	| ('+' | '-') arithmetic_expression											# signed
+	| arithmetic_expression arithmetic_operator arithmetic_expression			# operator
 	| macro_arithmetic_operator '(' arithmetic_expression (
 		',' arithmetic_expression
-	)* ')';
+	)* ')' # macro;
+
 macro_arithmetic_operator:
 	'abs'
 	| 'exp'
